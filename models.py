@@ -1,20 +1,27 @@
-# Import necessary libraries
+# 📦 Import necessary libraries
+import os
 import joblib
 import pandas as pd
-import os
-from sklearn.feature_extraction.text import TfidfVectorizer
+from typing import Dict, Any
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
 from utils import find_entities, prepare_output
-from typing import Dict, Any
 
 
-# Preprocess and mask text data
+# 🧹 Preprocess and mask text data
 def preprocess_texts(texts):
+    """
+    Apply entity masking on a list of email texts.
+    """
     return [find_entities(str(text))[1] for text in texts]
 
-# Train the SVM model and save the vectorizer and classifier
+
+# 🧠 Train the SVM model and save it along with the vectorizer
 def train_svm_model(X_train, y_train, save_dir='model'):
+    """
+    Train an SVM classifier with TF-IDF vectorization and save both to disk.
+    """
     os.makedirs(save_dir, exist_ok=True)
 
     vectorizer = TfidfVectorizer(
@@ -25,23 +32,32 @@ def train_svm_model(X_train, y_train, save_dir='model'):
     )
 
     classifier = SVC(kernel='linear')
+
     X_train_vectorized = vectorizer.fit_transform(X_train)
     classifier.fit(X_train_vectorized, y_train)
 
-    # Save vectorizer and classifier to files
+    # Save model artifacts
     joblib.dump(vectorizer, os.path.join(save_dir, 'vectorizer.pkl'))
     joblib.dump(classifier, os.path.join(save_dir, 'classifier.pkl'))
 
     return vectorizer, classifier
 
-# Load models (vectorizer and classifier)
+
+# 📥 Load trained models from disk
 def load_models(model_dir='model'):
+    """
+    Load vectorizer and classifier from a specified directory.
+    """
     vectorizer = joblib.load(os.path.join(model_dir, 'vectorizer.pkl'))
     classifier = joblib.load(os.path.join(model_dir, 'classifier.pkl'))
     return vectorizer, classifier
 
-# Main training function with CSV input
+
+# 📊 Train using a CSV file
 def train_from_csv(csv_path, test_size=0.2, random_state=44):
+    """
+    Train the model from a CSV file containing 'email' and 'type' columns.
+    """
     df = pd.read_csv(csv_path)
 
     if 'email' not in df.columns or 'type' not in df.columns:
@@ -69,31 +85,35 @@ def train_from_csv(csv_path, test_size=0.2, random_state=44):
     return vectorizer, classifier
 
 
-# New function to predict and format email text
+# 📬 Predict category and format masked output
 def predict_and_format(email_text: str, vectorizer, classifier) -> Dict[str, Any]:
     """
-    Predicts the category of an email and returns the output in the desired JSON format.
+    Predicts the category of an email and returns the output in the required JSON format.
     """
-    # Mask the email to get masked_email
     _, masked_email = find_entities(email_text)
 
-    # Transform masked email
     X_vectorized = vectorizer.transform([masked_email])
-
-    # Predict the category
     predicted_category = classifier.predict(X_vectorized)[0]
 
-    # Format final output
     return prepare_output(email_text, predicted_category)
 
 
-# Example Usage:
+# 🚀 Entry point for testing prediction
 if __name__ == '__main__':
-    # Assuming you've trained and saved your model
-    vectorizer, classifier = load_models('model')
+    try:
+        # Load trained models
+        vectorizer, classifier = load_models('model')
 
-    # Test the predict_and_format function with a sample email
-    email_text = "Hi, my name is John Doe. My card number is 1234-5678-9876-5432. Please process my payment."
-    result = predict_and_format(email_text, vectorizer, classifier)
+        # Sample test input
+        email_text = (
+            "Hi, my name is John Doe. My card number is 1234-5678-9876-5432. "
+            "Please process my payment."
+        )
 
-    print(result)
+        result = predict_and_format(email_text, vectorizer, classifier)
+
+        # Show result
+        print(result)
+
+    except Exception as e:
+        print(f"❌ Error: {e}")

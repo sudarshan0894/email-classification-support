@@ -1,18 +1,20 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import Dict, Any
 from utils import find_entities
 from models import load_models
 from train_module import train_from_csv
 import os
 
-app = FastAPI()
+# 🚀 Initialize FastAPI app
+app = FastAPI(title="Email Classifier API", version="1.0")
 
+# 🔐 CORS settings
 origins = [
     "http://localhost",
     "http://localhost:8080",
-    "*",  # WARNING: This allows all origins. Use with caution in production.
+    "*"  # WARNING: Use specific domains in production
 ]
 
 app.add_middleware(
@@ -23,19 +25,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load model
+# 📦 Load or train model
 MODEL_DIR = "model"
+CSV_PATH = "combined_emails_with_natural_pii.csv"
+
 try:
     vectorizer, classifier = load_models(MODEL_DIR)
+    print("✅ Model loaded successfully.")
 except FileNotFoundError:
-    print("Model not found. Training from CSV...")
-    vectorizer, classifier, _ = train_from_csv("combined_emails_with_natural_pii.csv")
+    print("⚠️ Model not found. Training from CSV...")
+    vectorizer, classifier = train_from_csv(CSV_PATH)
 
 
+# ✅ Health Check Root Route
+@app.get("/")
+def root():
+    return {"status": "Email Classifier API is running 🚀"}
+
+
+# 📬 Request model
 class EmailRequest(BaseModel):
     email_text: str
 
 
+# 🔍 Email classification endpoint
 @app.post("/classify")
 async def classify_email(data: EmailRequest) -> Dict[str, Any]:
     try:
@@ -49,5 +62,6 @@ async def classify_email(data: EmailRequest) -> Dict[str, Any]:
             "masked_email": masked_email,
             "category_of_the_email": category
         }
+
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"Something went wrong: {str(e)}"}
