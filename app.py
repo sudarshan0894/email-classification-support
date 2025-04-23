@@ -89,8 +89,6 @@ demo = gr.Interface(
     title="Email Classification System",
     description="Classify support emails and mask personal information",
     examples=[
-        ["Hello, My name is John Doe and my email is johndoe@example.com. "
-         "I'm having issues with my billing."],
         ["I need technical support for my account. "
          "My phone number is +91-9876543210."],
         ["Please update my account. My date of birth is 01/15/1990 and "
